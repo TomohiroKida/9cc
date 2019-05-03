@@ -16,9 +16,22 @@ typedef struct {
   char *input; // token string (for error message)
 } Token;
 
+enum {
+  ND_NUM = 256; // type of integer node
+};
+
+typedef struct Node {
+  int ty;           // operation or 'ND_NUM'
+  struct Node *lhs; // left-hand side
+  struct Node *rhs; // right-hand side
+  int val;          // use if ty is 'ND_NUM'
+} Node;
+
 // token array tokenized save this array.
 // define that more 100 tokens don't come
 Token tokens[100];
+// position of tokens now
+int pos = 0;
  
 // it report error
 // it have same arguments to 'printf'
@@ -62,6 +75,69 @@ void tokenize(char *p) {
 
   tokens[i].ty    = TK_EOF;
   tokens[i].input = p;
+}
+
+Node *new_node(int ty, Node *lhs, Node *rhs) {
+  Node *node = malloc(sizeof(Node));
+  node->ty = ty;
+  node->lhs = lhs;
+  node->rhs = rhs;
+  return node;
+}
+
+Node *new_node(int val) {
+  Node *node = malloc(sizeof(Node));
+  node->ty = ND_NUM;
+  node->val = val;
+  return node;
+}
+
+int consume(int ty) {
+  if (toknes[pos].ty != ty)
+    return 0;
+  pos++;
+  return 1;
+}
+
+Node *add() {
+  Node *node = mul();
+
+  for (;;) {
+    if (consume('+'))
+      node = new_node('+', node, mul());
+    else if (consume('-'))
+      node = new_node('-', node, mul());
+    else
+      return node;
+  }
+}
+
+Node *mul() {
+  Node *node = term();
+
+  for (;;) {
+    if (consume('*'))
+      node = new_node('*', node, term());
+    else if (consume('/'))
+      node = new_node('/', node, term());
+    else
+      return node;
+  }
+}
+
+Node *term() {
+  if (consume('(')) {
+    Node *node = add();
+    if (!consume(')'))
+      error("no close blacket appending open blacket: %s",
+          tokens[pos].input);
+    return node;
+  }
+
+  if (toknes[pos].ty == TK_NUM) 
+    return new_node_num(tokens[pos++].val);
+
+  error("token is num or open backets: %s", tokens[pos].input);
 }
 
 int main(int argc, char **argv) {
