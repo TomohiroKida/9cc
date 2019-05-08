@@ -66,6 +66,7 @@ void tokenize(char *p) {
     if (*p == '+' || 
         *p == '-' ||
         *p == '*' || 
+        *p == '/' || 
         *p == '(' || 
         *p == ')') {
       tokens[i].ty    = *p;
@@ -175,6 +176,10 @@ void gen(Node *node) {
       break;
     case '*':
       printf("  mul rdi\n");
+      break;
+    case '/':
+      printf("  mov rdx, 0\n");
+      printf("  div rdi\n");
       break;
   }
 
