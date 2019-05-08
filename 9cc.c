@@ -17,7 +17,7 @@ typedef struct {
 } Token;
 
 enum {
-  ND_NUM = 256; // type of integer node
+  ND_NUM = 256, // type of integer node
 };
 
 typedef struct Node {
@@ -33,6 +33,16 @@ Token tokens[100];
 // position of tokens now
 int pos = 0;
  
+void error(char *fmt, ...);
+void tokenize(char *p);
+Node *new_node(int ty, Node *lhs, Node *rhs);
+Node *new_node_num(int val);
+int consume(int ty);
+Node *add();
+Node *mul();
+Node *term();
+void gen(Node *node);
+
 // it report error
 // it have same arguments to 'printf'
 void error(char *fmt, ...) {
@@ -53,7 +63,8 @@ void tokenize(char *p) {
       continue;
     }
 
-    if (*p == '+' || *p == '-') {
+    if (*p == '+' || 
+        *p == '-') {
       tokens[i].ty    = *p;
       tokens[i].input =  p;
       i++;
@@ -85,7 +96,7 @@ Node *new_node(int ty, Node *lhs, Node *rhs) {
   return node;
 }
 
-Node *new_node(int val) {
+Node *new_node_num(int val) {
   Node *node = malloc(sizeof(Node));
   node->ty = ND_NUM;
   node->val = val;
@@ -93,7 +104,7 @@ Node *new_node(int val) {
 }
 
 int consume(int ty) {
-  if (toknes[pos].ty != ty)
+  if (tokens[pos].ty != ty)
     return 0;
   pos++;
   return 1;
@@ -134,10 +145,34 @@ Node *term() {
     return node;
   }
 
-  if (toknes[pos].ty == TK_NUM) 
+  if (tokens[pos].ty == TK_NUM) 
     return new_node_num(tokens[pos++].val);
 
   error("token is num or open backets: %s", tokens[pos].input);
+}
+
+void gen(Node *node) {
+  if (node->ty == ND_NUM) {
+    printf("  push %d\n", node->val);
+    return;
+  }
+
+  gen(node->lhs);
+  gen(node->rhs);
+
+  printf("  pop rdi\n");
+  printf("  pop rax\n");
+
+  switch (node->ty) {
+    case '+':
+      printf("  add rax, rdi\n");
+      break;
+    case '-':
+      printf("  sub rax, rdi\n");
+      break;
+  }
+
+  printf("  push rax\n");
 }
 
 int main(int argc, char **argv) {
@@ -146,39 +181,21 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  // tokenize and parse
   tokenize(argv[1]);
+  Node *node = add();
 
   // pre part of assembly
   printf(".intel_syntax noprefix\n");
   printf(".global main\n");
   printf("main:\n\n");
 
-  if (tokens[0].ty != TK_NUM) 
-    error("first term is not number");
-  else 
-    printf("  mov rax, %d\n", tokens[0].val);
+  // shake AST and create code
+  gen(node);
 
-  int i = 1;
-  while (tokens[i].ty != TK_EOF) {
-    if (tokens[i].ty == '+') {
-      i++;
-      if (tokens[i].ty != TK_NUM)
-        error("no expected word: %s\n", tokens[i].input);
-      printf(" add rax, %d\n", tokens[i].val);
-      i++;
-      continue;
-    }
-    if (tokens[i].ty == '-') {
-      i++;
-      if (tokens[i].ty != TK_NUM)
-        error("no expected word: %s\n", tokens[i].input);
-      printf(" sub rax, %d\n", tokens[i].val);
-      i++;
-      continue;
-    }
-
-    error("no expected word: %s\n", tokens[i].input);
-  }
+  // value of fomula remain stack top,
+  // load it to rax and return from function
+  printf("  pop rax\n");
   printf("  ret\n");
   return 0;
 }
