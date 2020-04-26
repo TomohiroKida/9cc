@@ -6,9 +6,9 @@ int main(int argc, char **argv) {
     fprintf(stderr, "num of arguments is not corrent\n");
     return 1;
   }
-
+  
   char *p = argv[1]; 
-
+  
   printf(".intel_syntax noprefix\n");
   printf(".global main\n");
   printf("\n");
