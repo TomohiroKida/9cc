@@ -13,7 +13,6 @@ typedef enum {
 } TokenKind;
 
 typedef struct Token Token;
-
 // トークン型
 struct Token {
   TokenKind kind; // トークンの型
@@ -24,6 +23,39 @@ struct Token {
 
 // 現在着目しているトークン
 Token *token;
+
+typedef enum {
+  ND_ADD, // +
+  ND_SUB, // -
+  ND_MUL, // *
+  ND_DIV, // /
+  ND_NUM, // 整数
+} NodeKind;
+
+typedef struct Node Node;
+// 抽象構文木のノード型
+struct Node {
+  TokenKind kind; // ノードの型
+  Node *lhs;      // 左辺
+  Node *rhs;      // 右辺
+  int val;        // kindがND_NUMの場合のみ使う
+};
+
+Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = kind;
+  node->lhs  = lhs;
+  node->rhs  = rhs;
+  return node;
+}
+
+Node *new_node_num(int val) {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_NUM;
+  node->val  = val;
+  return node;
+}
+ 
 
 // エラーを報告するための関数
 // printfと同じ引数
@@ -128,6 +160,49 @@ Token *tokenize() {
 
   new_token(TK_EOF, cur, p);
   return head.next;
+}
+
+Node *expr();
+Node *mul();
+Node *primary();
+
+Node *expr() {
+  Node *node = mul();
+
+  for (;;) {
+	if (consume('+'))
+	  node = new_node(ND_ADD, node, mul());
+	else if (consume('-'))
+	  node = new_node(ND_SUB, node, mul());
+	else
+	  return node;
+  }
+}
+
+Node *mul() {
+  Node *node = primary();
+
+  for (;;) {
+	if (consume('*'))
+	  node = new_node(ND_MUL, node, primary());
+	else if (consume('/'))
+	  node = new_node(ND_DIV, node, primary());
+	else
+	  return node;
+  }
+}
+
+Node *primary() {
+  // 次のトークンが'('なら，'(' expr ')' なはず
+  if (consume('(')) {
+	expect('(');
+	Node *node = expr();
+	expect(')');
+	return node;
+  }
+  
+  // そうでなければ数値のはず
+  return new_node_num(expect_number());
 }
 
 int main(int argc, char **argv) {
