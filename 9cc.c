@@ -143,7 +143,7 @@ Token *tokenize() {
       continue;
     }
 
-    if (*p == '+' || *p == '-') {
+    if (*p == '+' || *p == '-' || *p == '*' || *p == '/') {
       cur = new_token(TK_RESERVED, cur, p++);
       continue;
     }
@@ -225,7 +225,7 @@ void gen(Node *node) {
       printf("  sub rax, rdi\n");
       break;
     case ND_MUL:
-      printf("  mul rax, rdi\n");
+      printf("  imul rax, rdi\n");
       break;
     case ND_DIV:
       printf("  cqo\n");
