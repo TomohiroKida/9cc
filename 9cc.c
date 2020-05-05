@@ -91,7 +91,7 @@ void error_at(char *loc, char *fmt, ...) {
 // 真を返す．それ以外の場合には偽を返す．
 bool consume(char op) {
   if (token->kind != TK_RESERVED || token->str[0] != op)
-	return false;
+    return false;
   token = token->next;
   return true;
 }
@@ -99,9 +99,11 @@ bool consume(char op) {
 // 次のトークンが期待している記号のときには，トークンを1つ読み進める．
 // それ以外の場合にはエラーを報告する．
 void expect(char op) {
+  //printf("%c\n", token->str[0]);
+  //printf("%c\n", op);
   if (token->kind != TK_RESERVED || token->str[0] != op)
-	//error("'%c'ではありません", op);
-	error_at(token->str, "'%c'ではありません", op);
+    //error("'%c'ではありません", op);
+    error_at(token->str, "'%c'ではありません", op);
   token = token->next;
 }
 
@@ -145,6 +147,12 @@ Token *tokenize() {
 
     if (*p == '+' || *p == '-' || *p == '*' || *p == '/') {
       cur = new_token(TK_RESERVED, cur, p++);
+      continue;
+    }
+
+    if (*p == '(' || *p == ')') {
+      cur = new_token(TK_RESERVED, cur, p++);
+      //printf("%c\n", cur->str[0]);
       continue;
     }
 
@@ -195,10 +203,9 @@ Node *mul() {
 Node *primary() {
   // 次のトークンが'('なら，'(' expr ')' なはず
   if (consume('(')) {
-	expect('(');
-	Node *node = expr();
-	expect(')');
-	return node;
+    Node *node = expr();
+    expect(')');
+    return node;
   }
   
   // そうでなければ数値のはず
