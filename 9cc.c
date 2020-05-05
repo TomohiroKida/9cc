@@ -111,8 +111,8 @@ void expect(char op) {
 // それ以外の場合にはエラーを報告する．
 int expect_number() {
   if (token->kind != TK_NUM)
-	//error("数ではありません");
-	error_at(token->str, "数ではありません");
+    //error("数ではありません");
+    error_at(token->str, "数ではありません");
   int val = token->val;
   token = token->next;
   return val;
@@ -172,6 +172,7 @@ Token *tokenize() {
 
 Node *expr();
 Node *mul();
+Node *unary();
 Node *primary();
 
 Node *expr() {
@@ -188,16 +189,25 @@ Node *expr() {
 }
 
 Node *mul() {
-  Node *node = primary();
+  Node *node = unary();
 
   for (;;) {
-	if (consume('*'))
-	  node = new_node(ND_MUL, node, primary());
-	else if (consume('/'))
-	  node = new_node(ND_DIV, node, primary());
-	else
-	  return node;
+    if (consume('*'))
+      node = new_node(ND_MUL, node, unary());
+    else if (consume('/'))
+      node = new_node(ND_DIV, node, unary());
+    else
+      return node;
   }
+}
+
+Node *unary() {
+  if (consume('+')) 
+    return primary();
+  if (consume('-')) 
+    //return new_node_num(-expect_number());
+    return new_node(ND_SUB, new_node_num(0), unary());
+  return primary();
 }
 
 Node *primary() {
