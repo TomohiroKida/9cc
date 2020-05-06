@@ -19,6 +19,7 @@ struct Token {
   Token *next;    // 次の入力トークン
   int val;        // kindがTK_NUMの場合，その数値
   char *str;      // トークン文字列
+  int len;        // トークンの長さ
 };
 
 // 現在着目しているトークン
@@ -123,12 +124,17 @@ bool at_eof() {
 }
 
 // 新しいトークンを作成してcurに繋げる
-Token *new_token(TokenKind kind, Token *cur, char *str) {
+Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
   Token *tok = calloc(1, sizeof(Token));
   tok->kind = kind;
   tok->str = str;
+  tok->len = len;
   cur->next = tok;
   return tok;
+}
+
+bool startwith(char *p, char *q) {
+  return memcmp(p, q, strlen(q))==0;
 }
 
 // 入力文字列pをトークナイズしてそれを返す
@@ -146,27 +152,42 @@ Token *tokenize() {
     }
 
     if (*p == '+' || *p == '-' || *p == '*' || *p == '/') {
-      cur = new_token(TK_RESERVED, cur, p++);
+      cur = new_token(TK_RESERVED, cur, p++, 1);
       continue;
     }
 
     if (*p == '(' || *p == ')') {
-      cur = new_token(TK_RESERVED, cur, p++);
-      //printf("%c\n", cur->str[0]);
+      cur = new_token(TK_RESERVED, cur, p++, 1);
+      continue;
+    }
+
+    if (*p == '<' || *p == '>') {
+      cur = new_token(TK_RESERVED, cur, p++, 1);
+      continue;
+    }
+
+    if (startwith(p, "==") || startwith(p, "!=") ||
+        startwith(p, "<=") || startwith(p, ">=")) {
+      cur = new_token(TK_RESERVED, cur, p, 2);
+      p+=2;
       continue;
     }
 
     if (isdigit(*p)) {
-      cur = new_token(TK_NUM, cur, p);
+      // 数字トークンを作るときは長さは0にしておいて，
+      // strtolで値を取得する前の文字列ポインタと
+      // した後の文字列ポインタのアドレス値の差分を数字トークンの長さとする
+      cur = new_token(TK_NUM, cur, p, 0);
+      char *q = p;
       cur->val = strtol(p, &p, 10);
+      cur->len = p-p;
       continue;
     }
 
-    //error("トークナイズできません");
     error_at(p, "トークナイズできません");
   }
 
-  new_token(TK_EOF, cur, p);
+  new_token(TK_EOF, cur, p, 0);
   return head.next;
 }
 
