@@ -30,6 +30,10 @@ typedef enum {
   ND_SUB, // -
   ND_MUL, // *
   ND_DIV, // /
+  ND_EQ,  // ==
+  ND_NE,  // !=
+  ND_LT,  // <
+  ND_LE,  // <=
   ND_NUM, // 整数
 } NodeKind;
 
@@ -88,22 +92,21 @@ void error_at(char *loc, char *fmt, ...) {
   exit(1);
 }
 
-// 次のトークンが期待している記号のときには，トークンを1つ読み進めて
+// 次のトークンが期待している記号で同じ長さのときには，トークンを1つ読み進めて
 // 真を返す．それ以外の場合には偽を返す．
-bool consume(char op) {
-  if (token->kind != TK_RESERVED || token->str[0] != op)
+bool consume(char *op) {
+  if (token->kind != TK_RESERVED || token->len != strlen(op) ||
+      memcmp(token->str, op, token->len))
     return false;
   token = token->next;
   return true;
 }
 
-// 次のトークンが期待している記号のときには，トークンを1つ読み進める．
+// 次のトークンが期待している記号で同じ長さのときには，トークンを1つ読み進める．
 // それ以外の場合にはエラーを報告する．
-void expect(char op) {
-  //printf("%c\n", token->str[0]);
-  //printf("%c\n", op);
-  if (token->kind != TK_RESERVED || token->str[0] != op)
-    //error("'%c'ではありません", op);
+void expect(char *op) {
+  if (token->kind != TK_RESERVED || token->len != strlen(op) ||
+      memcmp(token->str, op, token->len))
     error_at(token->str, "'%c'ではありません", op);
   token = token->next;
 }
@@ -112,7 +115,6 @@ void expect(char op) {
 // それ以外の場合にはエラーを報告する．
 int expect_number() {
   if (token->kind != TK_NUM)
-    //error("数ではありません");
     error_at(token->str, "数ではありません");
   int val = token->val;
   token = token->next;
@@ -133,7 +135,7 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
   return tok;
 }
 
-bool startwith(char *p, char *q) {
+bool startswith(char *p, char *q) {
   return memcmp(p, q, strlen(q))==0;
 }
 
@@ -151,25 +153,16 @@ Token *tokenize() {
       continue;
     }
 
-    if (*p == '+' || *p == '-' || *p == '*' || *p == '/') {
-      cur = new_token(TK_RESERVED, cur, p++, 1);
-      continue;
-    }
-
-    if (*p == '(' || *p == ')') {
-      cur = new_token(TK_RESERVED, cur, p++, 1);
-      continue;
-    }
-
-    if (*p == '<' || *p == '>') {
-      cur = new_token(TK_RESERVED, cur, p++, 1);
-      continue;
-    }
-
-    if (startwith(p, "==") || startwith(p, "!=") ||
-        startwith(p, "<=") || startwith(p, ">=")) {
+    if (startswith(p, "==") || startswith(p, "!=") ||
+        startswith(p, "<=") || startswith(p, ">=")) {
       cur = new_token(TK_RESERVED, cur, p, 2);
-      p+=2;
+      p += 2;
+      continue;
+    }
+
+    //printf("%d\n", strchr("+-*/()<>", *p));
+    if (strchr("+-*/()<>", *p)) {
+      cur = new_token(TK_RESERVED, cur, p++, 1);
       continue;
     }
 
@@ -192,20 +185,57 @@ Token *tokenize() {
 }
 
 Node *expr();
+Node *equality();
+Node *relational();
+Node *add();
 Node *mul();
 Node *unary();
 Node *primary();
 
 Node *expr() {
+  return equality();
+}
+
+Node *equality() {
+  Node *node = relational();
+
+  for (;;) {
+    if (consume("=="))
+      node = new_node(ND_EQ, node, relational());
+    else if (consume("!="))
+      node = new_node(ND_NE, node, relational());
+    else 
+      return node;
+  }
+}
+
+Node *relational() {
+  Node *node = add();
+
+  for (;;) {
+    if (consume("<"))
+      node = new_node(ND_LT, node, add());
+    else if (consume("<="))
+      node = new_node(ND_LE, node, add());
+    else if (consume(">"))
+      node = new_node(ND_LT, add(), node);
+    else if (consume(">="))
+      node = new_node(ND_LE, add(), node);
+    else 
+      return node;
+  }
+}
+
+Node *add() {
   Node *node = mul();
 
   for (;;) {
-	if (consume('+'))
-	  node = new_node(ND_ADD, node, mul());
-	else if (consume('-'))
-	  node = new_node(ND_SUB, node, mul());
-	else
-	  return node;
+    if (consume("+"))
+      node = new_node(ND_ADD, node, mul());
+    else if (consume("-"))
+      node = new_node(ND_SUB, node, mul());
+    else
+      return node;
   }
 }
 
@@ -213,9 +243,9 @@ Node *mul() {
   Node *node = unary();
 
   for (;;) {
-    if (consume('*'))
+    if (consume("*"))
       node = new_node(ND_MUL, node, unary());
-    else if (consume('/'))
+    else if (consume("/"))
       node = new_node(ND_DIV, node, unary());
     else
       return node;
@@ -223,9 +253,9 @@ Node *mul() {
 }
 
 Node *unary() {
-  if (consume('+')) 
+  if (consume("+")) 
     return primary();
-  if (consume('-')) 
+  if (consume("-")) 
     //return new_node_num(-expect_number());
     return new_node(ND_SUB, new_node_num(0), unary());
   return primary();
@@ -233,9 +263,9 @@ Node *unary() {
 
 Node *primary() {
   // 次のトークンが'('なら，'(' expr ')' なはず
-  if (consume('(')) {
+  if (consume("(")) {
     Node *node = expr();
-    expect(')');
+    expect(")");
     return node;
   }
   
@@ -276,7 +306,6 @@ void gen(Node *node) {
 
 int main(int argc, char **argv) {
   if (argc != 2) {
-    //error("引数の個数が正しくありません");
     error_at(token->str, "引数の個数が正しくありません");
     return 1;
   }
@@ -293,22 +322,6 @@ int main(int argc, char **argv) {
   printf("main:\n");
 
   gen(node);
-
-  ///// 式の最初は数でなければならないので，それをチェックして
-  ///// 最初のmov命令を出力
-  ///printf("  mov rax, %d\n", expect_number());
-
-  ///// `+ <数>`あるいは`- <数>`というトークンの並びを消費しつつ
-  ///// アセンブリを出力
-  ///while (!at_eof()) {
-	///if (consume('+')) {
-	///  printf("add rax, %d\n", expect_number());
-	///  continue;
-	///}
-
-	///expect('-');
-	///printf("sub rax, %d\n", expect_number());
-  ///}
 
   printf("  pop rax\n");
   printf("  ret\n");
