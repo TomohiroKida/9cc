@@ -27,6 +27,14 @@ bool consume(char *op) {
   return true;
 }
 
+Token *consume_ident() {
+    if (token->kind != TK_IDENT)
+        return NULL;
+    Token *t = token;
+    token = token->next;
+    return t;
+}
+
 // 次のトークンが期待している記号で同じ長さのときには，トークンを1つ読み進める．
 // それ以外の場合にはエラーを報告する．
 void expect(char *op) {
@@ -115,8 +123,31 @@ Token *tokenize() {
   return head.next;
 }
 
+Node *code[100];
+
+void *program() {
+    int i = 0;
+    while (!at_eof()) {
+        code[i++] = stmt();
+    }
+    code[i] = NULL;
+}
+
+Node *stmt() {
+    Node *node = expr();
+    expect(";");
+    return node;
+}
+
 Node *expr() {
-  return equality();
+  return assign();
+}
+
+Node *assign() {
+    Node *node = equality();
+    if (consume("=")) 
+        node = new_node(ND_ASSIGN, node, assign());
+    return node;
 }
 
 Node *equality() {
@@ -192,6 +223,16 @@ Node *primary() {
     return node;
   }
   
+  // 識別子なら，ND_LVARなはず
+  // tok = 識別子以降のトークン
+  Token *tok = consume_ident();
+  if (tok) {
+    Node *node = calloc(1, sizeof(Node));
+    node->kind = ND_LVAR;
+    node->offset = (tok->str[0] - 'a' + 1) * 8;
+    return node; 
+  }
+
   // そうでなければ数値のはず
   return new_node_num(expect_number());
 }
