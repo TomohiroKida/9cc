@@ -90,6 +90,7 @@ Token *tokenize() {
             continue;
         }
 
+        // 複数文字の句読点
         if (startswith(p, "==") || startswith(p, "!=") ||
             startswith(p, "<=") || startswith(p, ">=")) {
             cur = new_token(TK_RESERVED, cur, p, 2);
@@ -97,8 +98,8 @@ Token *tokenize() {
             continue;
         }
 
-        // 単項演算子
-        if (strchr("+-*/()<>", *p)) {
+        // 単一文字の句読点
+        if (ispunct(*p)) {
             cur = new_token(TK_RESERVED, cur, p++, 1);
             continue;
         }

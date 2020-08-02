@@ -8,7 +8,7 @@ int main(int argc, char **argv) {
   // トークナイズしてパースする
   user_input = argv[1];
   token = tokenize();
-  Node *node = expr();
+  Node *node = program();
 
   // ASTを走査して，アセンブリを出力する
   codegen(node);

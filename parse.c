@@ -21,6 +21,8 @@ static Node *new_num(long val) {
   return node;
 }
 
+static Node *stmt(void);
+static Node *expr(void);
 static Node *equality(void);
 static Node *relational(void);
 static Node *add(void);
@@ -28,13 +30,32 @@ static Node *mul(void);
 static Node *unary(void);
 static Node *primary(void);
 
+// program = stmt*
+Node *program(void) {
+    Node head = {};
+    Node *cur = &head;
+
+    while (!at_eof()) {
+        cur->next = stmt();
+        cur = cur->next;
+    }
+    return head.next;
+}
+
+// stmt = expr ";"
+static Node *stmt(void) {
+    Node *node = expr();
+    expect(";");
+    return node;
+}
+
 // expr = equality
-Node *expr() {
+static Node *expr(void) {
   return equality();
 }
 
 // equality = relational ("==" relational | "!=" relational)*
-static Node *equality() {
+static Node *equality(void) {
     Node *node = relational();
 
     for (;;) {
@@ -48,7 +69,7 @@ static Node *equality() {
 }
 
 // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
-static Node *relational() {
+static Node *relational(void) {
     Node *node = add();
 
     for (;;) {
@@ -66,7 +87,7 @@ static Node *relational() {
 }
 
 // add = mul ("+" mul | "-" mul)*
-Node *add() {
+Node *add(void) {
     Node *node = mul();
 
     for (;;) {
@@ -80,7 +101,7 @@ Node *add() {
 }
 
 // mul =  unary ("*" unary | "/" unary)*
-Node *mul() {
+Node *mul(void) {
     Node *node = unary();
 
     for (;;) {
@@ -94,7 +115,7 @@ Node *mul() {
 }
 
 // unary = ("+" | "-")? primary
-Node *unary() {
+Node *unary(void) {
     if (consume("+")) 
         return primary();
     if (consume("-")) 
@@ -103,7 +124,7 @@ Node *unary() {
 }
 
 // primary = "(" expr ")" | num
-Node *primary() {
+Node *primary(void) {
   // 次のトークンが'('なら，'(' expr ')' なはず
   if (consume("(")) {
     Node *node = expr();

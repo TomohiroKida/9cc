@@ -56,10 +56,12 @@ void codegen(Node *node) {
     printf(".global main\n");
     printf("main:\n");
 
-    gen(node);
+    for (Node *n = node; n; n = n->next) {
+        gen(n);
+        // 結果はスタックのトップに格納しなければならないので，
+        // それをRAXにポップして，RAXがプログラム終了コードになる．
+        printf("  pop rax\n");
+    }
 
-    // 結果はスタックのトップに格納しなければならないので，
-    // それをRAXにポップして，RAXがプログラム終了コードになる．
-    printf("  pop rax\n");
     printf("  ret\n");
 }
