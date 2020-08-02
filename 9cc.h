@@ -23,6 +23,23 @@ struct Token {
   int len;        // トークンの長さ
 };
 
+// container.c /////////////////////////////////////////////////////////////////
+
+void error(char *fmt, ...);
+void error_at(char *loc, char *fmt, ...);
+
+bool at_eof();
+Token *tokenize();
+
+
+// 現在着目しているトークン
+extern Token *token;
+// 入力プログラム
+extern char *user_input;
+
+
+// parse.c /////////////////////////////////////////////////////////////////////
+
 typedef enum {
   ND_ADD,    // +
   ND_SUB,    // -
@@ -47,42 +64,12 @@ struct Node {
   int offset;     // kindがND_LVARの場合のみ使う
 };
 
-// 現在着目しているトークン
-extern Token *token;
-// 入力プログラム
-extern char *user_input;
 
-// container.c /////////////////////////////////////////////////////////////////
-
-void error(char *fmt, ...);
-void error_at(char *loc, char *fmt, ...);
-
-// parse.c /////////////////////////////////////////////////////////////////////
-
-Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
-Node *new_node_num(int val);
-
-bool consume(char *op);
-Token *consume_ident();
-void expect(char *op);
-int expect_number();
-bool at_eof();
-
-Token *new_token(TokenKind kind, Token *cur, char *str, int len);
-bool startswith(char *p, char *q);
-Token *tokenize();
+Node *code[100];
 
 void *program();
-Node *stmt();
-Node *expr();
-Node *assign();
-Node *equality();
-Node *relational();
-Node *add();
-Node *mul();
-Node *unary();
-Node *primary();
 
 // codegen.c ///////////////////////////////////////////////////////////////////
 
+void gen_lval(Node *node);
 void gen(Node *node);
