@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+//
+// tokenize.c
+//
+
 // トークンの種類
 typedef enum {
   TK_RESERVED, // 記号
@@ -21,6 +25,23 @@ struct Token {
   char *str;      // トークン文字列
   int len;        // トークンの長さ
 };
+
+void error(char *fmt, ...);
+void error_at(char *loc, char *fmt, ...);
+bool consume(char *op);
+void expect(char *op);
+int expect_number(void);
+bool at_eof(void);
+Token *tokenize(void);
+
+// 入力プログラム
+extern char *user_input;
+// 現在着目しているトークン
+extern Token *token;
+
+//
+// parse.c
+//
 
 typedef enum {
   ND_ADD, // +
@@ -43,38 +64,10 @@ struct Node {
   int val;        // kindがND_NUMの場合のみ使う
 };
 
-// 現在着目しているトークン
-extern Token *token;
-// 入力プログラム
-extern char *user_input;
+Node *expr(void);
 
-// container.c /////////////////////////////////////////////////////////////////
+//
+// codegen.c
+//
 
-void error(char *fmt, ...);
-void error_at(char *loc, char *fmt, ...);
-
-// parse.c /////////////////////////////////////////////////////////////////////
-
-Node *new_node(NodeKind kind, Node *lhs, Node *rhs);
-Node *new_node_num(int val);
-
-bool consume(char *op);
-void expect(char *op);
-int expect_number();
-bool at_eof();
-
-Token *new_token(TokenKind kind, Token *cur, char *str, int len);
-bool startswith(char *p, char *q);
-Token *tokenize();
-
-Node *expr();
-Node *equality();
-Node *relational();
-Node *add();
-Node *mul();
-Node *unary();
-Node *primary();
-
-// codegen.c ///////////////////////////////////////////////////////////////////
-
-void gen(Node *node);
+void codegen(Node *node);
