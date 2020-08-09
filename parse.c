@@ -54,7 +54,7 @@ static Node *stmt(void) {
     if (consume("return")) 
         node = new_unary(ND_RETURN, expr());
     else 
-        node = expr();
+        node = new_unary(ND_EXPR_STMT, expr());
     expect(";");
     return node;
 }
