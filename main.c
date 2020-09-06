@@ -8,10 +8,18 @@ int main(int argc, char **argv) {
   // トークナイズしてパースする
   user_input = argv[1];
   token = tokenize();
-  Node *node = program();
+  Function *prog = program();
+
+  // オフセットをローカル変数に割当て
+  int offset = 0;
+  for (Var *var = prog->locals; var; var = var->next) {
+      offset +=8;
+      var->offset = offset;
+  }
+  prog->stack_size = offset;
 
   // ASTを走査して，アセンブリを出力する
-  codegen(node);
+  codegen(prog);
 
   return 0;
 }

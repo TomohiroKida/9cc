@@ -40,6 +40,7 @@ bool consume(char *op) {
   return true;
 }
 
+// 識別子だったら，トークンを1つ読み進めて識別子のトークンを返す
 Token *consume_ident(void) {
     if (token->kind != TK_IDENT)
         return NULL;
@@ -113,10 +114,12 @@ Token *tokenize() {
             continue;
         }
 
-        // 識別子
-        if ('a' <= *p && *p <= 'z') {
-            cur = new_token(TK_IDENT, cur, p, 1);
-            p++;
+        // 識別子 識別子の文字数を数える
+        if (is_alpha(*p)) {
+            char *q = p++;
+            while (is_alnum(*p))
+                p++;
+            cur = new_token(TK_IDENT, cur, q, p - q);
             continue;
         }
 

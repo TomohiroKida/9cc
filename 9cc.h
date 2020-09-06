@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -45,6 +46,15 @@ extern Token *token;
 // parse.c
 //
 
+// Local variable
+typedef struct Var Var;
+struct Var {
+  Var *next;
+  char *name; // Variable name
+  int offset; // Offset from RBP
+};
+
+// AST node
 typedef enum {
   ND_ADD,       // +
   ND_SUB,       // -
@@ -68,14 +78,20 @@ struct Node {
   Node *next;     // 次のノード
   Node *lhs;      // 左辺
   Node *rhs;      // 右辺
-  char name;      // kindがND_VARの場合のみ使う
+  Var *var;       // kindがND_VARの場合のみ使う
   int val;        // kindがND_NUMの場合のみ使う
 };
 
-Node *program(void);
+typedef struct Function Function;
+struct Function {
+  Node *node;
+  Var *locals;
+  int stack_size;
+};
+Function *program(void);
 
 //
 // codegen.c
 //
 
-void codegen(Node *node);
+void codegen(Function *prog);
